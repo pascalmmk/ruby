@@ -78,3 +78,41 @@ export async function deleteItem(id: string): Promise<void> {
   const { error } = await supabase.from('items').delete().eq('id', id);
   if (error) throw error;
 }
+
+// ---- Sharing ---------------------------------------------------------------
+
+export type Member = { user_id: string; role: string; display_name: string };
+
+export type ShareResult = 'added' | 'not_found' | 'self';
+
+export async function shareList(listId: string, email: string): Promise<ShareResult> {
+  const { data, error } = await supabase.rpc('add_list_member', {
+    _list_id: listId,
+    _email: email,
+  });
+  if (error) throw error;
+  return (data as ShareResult) ?? 'added';
+}
+
+export async function fetchMembers(listId: string): Promise<Member[]> {
+  const { data: members, error } = await supabase
+    .from('list_members')
+    .select('user_id, role')
+    .eq('list_id', listId);
+  if (error) throw error;
+
+  const ids = (members ?? []).map((m) => m.user_id);
+  if (ids.length === 0) return [];
+
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, display_name')
+    .in('id', ids);
+  if (profileError) throw profileError;
+
+  return (members ?? []).map((m) => ({
+    user_id: m.user_id,
+    role: m.role,
+    display_name: profiles?.find((p) => p.id === m.user_id)?.display_name ?? 'Someone',
+  }));
+}

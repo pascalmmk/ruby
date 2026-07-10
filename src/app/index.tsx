@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RubyLogo } from '@/components/ruby-logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -50,7 +51,10 @@ export default function ListsScreen() {
     <ThemedView style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <ThemedText type="subtitle">💎 Ruby</ThemedText>
+          <View style={styles.brand}>
+            <RubyLogo size={30} />
+            <ThemedText type="subtitle">Ruby</ThemedText>
+          </View>
           <Pressable onPress={signOut} hitSlop={8}>
             <ThemedText type="small" themeColor="textSecondary">
               Sign out
@@ -145,6 +149,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.three,
     paddingBottom: Spacing.two,
   },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   composer: {
     marginHorizontal: Spacing.three,
     padding: Spacing.three,

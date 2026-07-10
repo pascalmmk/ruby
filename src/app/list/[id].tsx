@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ShareSheet } from '@/components/share-sheet';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -30,6 +31,7 @@ export default function ListDetailScreen() {
   const { items, loading } = useItems(id);
   const [list, setList] = useState<List | null>(null);
   const [text, setText] = useState('');
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     fetchList(id).then(setList).catch((err) => console.warn('Failed to load list', err));
@@ -67,6 +69,11 @@ export default function ListDetailScreen() {
               ‹ Lists
             </ThemedText>
           </Pressable>
+          <Pressable onPress={() => setShareOpen((v) => !v)} hitSlop={8} style={styles.back}>
+            <ThemedText type="default" themeColor="textSecondary">
+              {shareOpen ? 'Close' : 'Share'}
+            </ThemedText>
+          </Pressable>
         </View>
 
         <View style={styles.titleRow}>
@@ -80,6 +87,10 @@ export default function ListDetailScreen() {
             </ThemedText>
           </View>
         </View>
+
+        {shareOpen ? (
+          <ShareSheet listId={id} isOwner={!!session && list?.owner_id === session.user.id} />
+        ) : null}
 
         {loading ? (
           <View style={styles.centerFill}>
@@ -156,7 +167,13 @@ export default function ListDetailScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1, maxWidth: 640, width: '100%', alignSelf: 'center' },
-  header: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
+  },
   back: { alignSelf: 'flex-start', paddingVertical: Spacing.one },
   titleRow: {
     flexDirection: 'row',

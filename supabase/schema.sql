@@ -174,6 +174,42 @@ create policy items_all on public.items
   with check (public.is_list_member(list_id));
 
 -- ---------------------------------------------------------------------------
+-- Sharing: invite a user to a list by email.
+-- SECURITY DEFINER so it can look up auth.users (clients can't) without ever
+-- exposing emails. Only the list owner may invite. Returns a status string.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.add_list_member(_list_id uuid, _email text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _uid uuid;
+begin
+  if not exists (select 1 from lists where id = _list_id and owner_id = auth.uid()) then
+    raise exception 'Only the list owner can invite members';
+  end if;
+
+  select id into _uid from auth.users where lower(email) = lower(trim(_email));
+  if _uid is null then
+    return 'not_found';
+  end if;
+  if _uid = auth.uid() then
+    return 'self';
+  end if;
+
+  insert into list_members (list_id, user_id, role)
+  values (_list_id, _uid, 'editor')
+  on conflict (list_id, user_id) do nothing;
+  return 'added';
+end;
+$$;
+
+grant execute on function public.add_list_member(uuid, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Realtime: broadcast row changes for lists and items to subscribed clients
 -- ---------------------------------------------------------------------------
 

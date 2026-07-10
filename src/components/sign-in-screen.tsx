@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RubyLogo } from '@/components/ruby-logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -52,7 +53,10 @@ export function SignInScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.center}>
           <View style={styles.hero}>
-            <ThemedText type="title">💎 Ruby</ThemedText>
+            <View style={styles.brand}>
+              <RubyLogo size={44} />
+              <ThemedText type="title">Ruby</ThemedText>
+            </View>
             <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
               Shared lists that sync everywhere, live.
             </ThemedText>
@@ -137,6 +141,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   hero: { alignItems: 'center', gap: Spacing.two },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   tagline: { textAlign: 'center' },
   form: { gap: Spacing.three },
   input: {
