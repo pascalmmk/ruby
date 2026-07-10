@@ -72,7 +72,10 @@ export function SignInScreen() {
               autoCorrect={false}
               keyboardType="email-address"
               inputMode="email"
-              style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+              style={[
+                styles.input,
+                { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
+              ]}
             />
             <TextInput
               value={password}
@@ -82,7 +85,10 @@ export function SignInScreen() {
               secureTextEntry
               autoCapitalize="none"
               onSubmitEditing={submit}
-              style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+              style={[
+                styles.input,
+                { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
+              ]}
             />
 
             {error ? (
@@ -99,7 +105,10 @@ export function SignInScreen() {
             <Pressable
               onPress={submit}
               disabled={busy}
-              style={[styles.button, { backgroundColor: '#3c87f7', opacity: busy ? 0.6 : 1 }]}>
+              style={({ pressed }) => [
+                styles.button,
+                { backgroundColor: pressed ? theme.accentPressed : theme.accent, opacity: busy ? 0.7 : 1 },
+              ]}>
               {busy ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
@@ -145,17 +154,18 @@ const styles = StyleSheet.create({
   tagline: { textAlign: 'center' },
   form: { gap: Spacing.three },
   input: {
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
     fontSize: 16,
   },
   button: {
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
     paddingVertical: Spacing.three,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 52,
   },
   buttonText: { color: '#ffffff' },
   switch: { textAlign: 'center' },

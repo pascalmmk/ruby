@@ -53,13 +53,13 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
   }
 
   return (
-    <View style={[styles.panel, { backgroundColor: theme.backgroundElement }]}>
+    <View style={[styles.panel, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       <ThemedText type="smallBold">Shared with</ThemedText>
 
       <View style={styles.members}>
         {members.map((m) => (
           <View key={m.user_id} style={styles.member}>
-            <View style={[styles.avatar, { backgroundColor: '#C0182F' }]}>
+            <View style={[styles.avatar, { backgroundColor: theme.accent }]}>
               <ThemedText type="small" style={styles.avatarText}>
                 {initials(m.display_name)}
               </ThemedText>
@@ -87,14 +87,17 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
               keyboardType="email-address"
               inputMode="email"
               onSubmitEditing={invite}
-              style={[styles.input, { color: theme.text, backgroundColor: theme.background }]}
+              style={[
+                styles.input,
+                { color: theme.text, backgroundColor: theme.background, borderColor: theme.border },
+              ]}
             />
             <Pressable
               onPress={invite}
               disabled={busy || !email.trim()}
               style={[
                 styles.button,
-                { backgroundColor: '#C0182F', opacity: busy || !email.trim() ? 0.5 : 1 },
+                { backgroundColor: theme.accent, opacity: busy || !email.trim() ? 0.5 : 1 },
               ]}>
               {busy ? (
                 <ActivityIndicator color="#ffffff" size="small" />
@@ -125,7 +128,8 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.three,
     marginBottom: Spacing.two,
     padding: Spacing.three,
-    borderRadius: Spacing.three,
+    borderRadius: Spacing.four,
+    borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.two,
   },
   members: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
@@ -141,14 +145,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one },
   input: {
     flex: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
     minHeight: 44,
   },
   button: {
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',

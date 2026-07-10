@@ -81,7 +81,9 @@ export default function ListDetailScreen() {
         </View>
 
         <View style={styles.titleRow}>
-          <ThemedText style={styles.titleEmoji}>{list?.emoji ?? '📝'}</ThemedText>
+          <View style={[styles.titleEmojiWrap, { backgroundColor: theme.accentSoft }]}>
+            <ThemedText style={styles.titleEmoji}>{list?.emoji ?? '📝'}</ThemedText>
+          </View>
           <View style={styles.titleTextWrap}>
             <ThemedText type="subtitle" numberOfLines={1}>
               {list?.name ?? 'List'}
@@ -113,14 +115,14 @@ export default function ListDetailScreen() {
               </ThemedText>
             }
             renderItem={({ item }) => (
-              <View style={[styles.itemRow, { backgroundColor: theme.backgroundElement }]}>
+              <View style={[styles.itemRow, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
                 <Pressable onPress={() => handleToggle(item)} hitSlop={8} style={styles.checkWrap}>
                   <View
                     style={[
                       styles.checkbox,
                       {
-                        borderColor: item.is_done ? '#3c87f7' : theme.textSecondary,
-                        backgroundColor: item.is_done ? '#3c87f7' : 'transparent',
+                        borderColor: item.is_done ? theme.accent : theme.textSecondary,
+                        backgroundColor: item.is_done ? theme.accent : 'transparent',
                       },
                     ]}>
                     {item.is_done ? <ThemedText style={styles.check}>✓</ThemedText> : null}
@@ -160,13 +162,19 @@ export default function ListDetailScreen() {
             onSubmitEditing={handleAdd}
             returnKeyType="done"
             blurOnSubmit={false}
-            style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+            style={[
+              styles.input,
+              { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            ]}
           />
           <Pressable
             onPress={handleAdd}
             disabled={!text.trim()}
-            style={[styles.addButton, { backgroundColor: '#3c87f7', opacity: text.trim() ? 1 : 0.5 }]}>
-            <ThemedText type="smallBold" style={styles.addButtonText}>
+            style={({ pressed }) => [
+              styles.addButton,
+              { backgroundColor: pressed ? theme.accentPressed : theme.accent, opacity: text.trim() ? 1 : 0.5 },
+            ]}>
+            <ThemedText type="smallBold" style={[styles.addButtonText, { color: theme.onAccent }]}>
               Add
             </ThemedText>
           </Pressable>
@@ -196,7 +204,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
   },
-  titleEmoji: { fontSize: 40 },
+  titleEmojiWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleEmoji: { fontSize: 32 },
   titleTextWrap: { flex: 1, gap: 2 },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listContent: { padding: Spacing.three, gap: Spacing.two },
@@ -206,7 +221,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     padding: Spacing.three,
-    borderRadius: Spacing.three,
+    borderRadius: Spacing.four,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   checkWrap: { padding: 2 },
   checkbox: {
@@ -227,11 +243,12 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
-    minHeight: 44,
+    minHeight: 46,
   },
   addButton: {
     borderRadius: Spacing.two,

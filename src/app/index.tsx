@@ -63,7 +63,7 @@ export default function ListsScreen() {
           </Pressable>
         </View>
 
-        <View style={[styles.composer, { backgroundColor: theme.backgroundElement }]}>
+        <View style={[styles.composer, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
           <View style={styles.emojiRow}>
             {EMOJIS.map((e) => (
               <Pressable
@@ -71,7 +71,10 @@ export default function ListsScreen() {
                 onPress={() => setEmoji(e)}
                 style={[
                   styles.emojiChip,
-                  { backgroundColor: emoji === e ? theme.backgroundSelected : 'transparent' },
+                  {
+                    backgroundColor: emoji === e ? theme.accentSoft : 'transparent',
+                    borderColor: emoji === e ? theme.accent : 'transparent',
+                  },
                 ]}>
                 <ThemedText type="default">{e}</ThemedText>
               </Pressable>
@@ -84,16 +87,22 @@ export default function ListsScreen() {
               placeholder="New list name…"
               placeholderTextColor={theme.textSecondary}
               onSubmitEditing={handleCreate}
-              style={[styles.input, { color: theme.text, backgroundColor: theme.background }]}
+              style={[
+                styles.input,
+                { color: theme.text, backgroundColor: theme.background, borderColor: theme.border },
+              ]}
             />
             <Pressable
               onPress={handleCreate}
               disabled={creating || !name.trim()}
-              style={[
+              style={({ pressed }) => [
                 styles.addButton,
-                { backgroundColor: '#3c87f7', opacity: creating || !name.trim() ? 0.5 : 1 },
+                {
+                  backgroundColor: pressed ? theme.accentPressed : theme.accent,
+                  opacity: creating || !name.trim() ? 0.5 : 1,
+                },
               ]}>
-              <ThemedText type="smallBold" style={styles.addButtonText}>
+              <ThemedText type="smallBold" style={[styles.addButtonText, { color: theme.onAccent }]}>
                 Create
               </ThemedText>
             </Pressable>
@@ -121,13 +130,16 @@ export default function ListsScreen() {
                   styles.listRow,
                   {
                     backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
+                    borderColor: theme.border,
                   },
                 ]}>
-                <ThemedText style={styles.listEmoji}>{item.emoji}</ThemedText>
+                <View style={[styles.listEmojiWrap, { backgroundColor: theme.accentSoft }]}>
+                  <ThemedText style={styles.listEmoji}>{item.emoji}</ThemedText>
+                </View>
                 <ThemedText type="default" style={styles.listName}>
                   {item.name}
                 </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
+                <ThemedText type="subtitle" themeColor="textSecondary" style={styles.chevron}>
                   ›
                 </ThemedText>
               </Pressable>
@@ -154,29 +166,32 @@ const styles = StyleSheet.create({
   composer: {
     marginHorizontal: Spacing.three,
     padding: Spacing.three,
-    borderRadius: Spacing.three,
-    gap: Spacing.two,
+    borderRadius: Spacing.four,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: Spacing.three,
   },
   emojiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
   emojiChip: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: Spacing.two,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   composerRow: { flexDirection: 'row', gap: Spacing.two },
   input: {
     flex: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
-    minHeight: 44,
+    minHeight: 46,
   },
   addButton: {
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
+    paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -188,9 +203,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    padding: Spacing.three,
+    padding: Spacing.two,
+    paddingRight: Spacing.three,
+    borderRadius: Spacing.four,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  listEmojiWrap: {
+    width: 44,
+    height: 44,
     borderRadius: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listEmoji: { fontSize: 24 },
   listName: { flex: 1 },
+  chevron: { fontSize: 28, lineHeight: 30, marginTop: -4 },
 });
