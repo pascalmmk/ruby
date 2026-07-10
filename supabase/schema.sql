@@ -128,9 +128,12 @@ create policy profiles_update on public.profiles
   for update to authenticated using (id = auth.uid());
 
 -- lists: members can read; only the owner can create/rename/delete.
+-- The direct `owner_id = auth.uid()` term (evaluated on the row itself, no table
+-- re-scan) lets `insert ... returning` work and short-circuits the function for
+-- owner-owned rows; is_list_member covers rows shared with you by someone else.
 drop policy if exists lists_select on public.lists;
 create policy lists_select on public.lists
-  for select to authenticated using (public.is_list_member(id));
+  for select to authenticated using (owner_id = auth.uid() or public.is_list_member(id));
 
 drop policy if exists lists_insert on public.lists;
 create policy lists_insert on public.lists
@@ -177,3 +180,9 @@ create policy items_all on public.items
 alter publication supabase_realtime add table public.items;
 alter publication supabase_realtime add table public.lists;
 alter publication supabase_realtime add table public.list_members;
+
+-- REPLICA IDENTITY FULL makes DELETE (and UPDATE) events include the whole old
+-- row, not just the primary key. Without this, a delete event only carries the
+-- id, so any realtime subscription filtered by another column (e.g. list_id)
+-- silently drops deletes.
+alter table public.items replica identity full;
