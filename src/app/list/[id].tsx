@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ShareSheet } from '@/components/share-sheet';
 import { ThemedText } from '@/components/themed-text';
@@ -32,6 +32,7 @@ export default function ListDetailScreen() {
   const [list, setList] = useState<List | null>(null);
   const [text, setText] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     fetchList(id).then(setList).catch((err) => console.warn('Failed to load list', err));
@@ -62,6 +63,9 @@ export default function ListDetailScreen() {
 
   return (
     <ThemedView style={styles.root}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
@@ -99,7 +103,9 @@ export default function ListDetailScreen() {
         ) : (
           <FlatList
             data={items}
+            style={styles.flex}
             keyExtractor={(i) => i.id}
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
@@ -138,34 +144,42 @@ export default function ListDetailScreen() {
           />
         )}
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={[styles.composer, { borderTopColor: theme.backgroundElement }]}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder="Add an item…"
-              placeholderTextColor={theme.textSecondary}
-              onSubmitEditing={handleAdd}
-              returnKeyType="done"
-              style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-            />
-            <Pressable
-              onPress={handleAdd}
-              disabled={!text.trim()}
-              style={[styles.addButton, { backgroundColor: '#3c87f7', opacity: text.trim() ? 1 : 0.5 }]}>
-              <ThemedText type="smallBold" style={styles.addButtonText}>
-                Add
-              </ThemedText>
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
+        <View
+          style={[
+            styles.composer,
+            {
+              borderTopColor: theme.backgroundElement,
+              paddingBottom: Math.max(insets.bottom, Spacing.two) + Spacing.two,
+            },
+          ]}>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder="Add an item…"
+            placeholderTextColor={theme.textSecondary}
+            onSubmitEditing={handleAdd}
+            returnKeyType="done"
+            blurOnSubmit={false}
+            style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+          />
+          <Pressable
+            onPress={handleAdd}
+            disabled={!text.trim()}
+            style={[styles.addButton, { backgroundColor: '#3c87f7', opacity: text.trim() ? 1 : 0.5 }]}>
+            <ThemedText type="smallBold" style={styles.addButtonText}>
+              Add
+            </ThemedText>
+          </Pressable>
+        </View>
       </SafeAreaView>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  flex: { flex: 1 },
   safe: { flex: 1, maxWidth: 640, width: '100%', alignSelf: 'center' },
   header: {
     flexDirection: 'row',

@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RubyLogo } from '@/components/ruby-logo';
 import { ThemedText } from '@/components/themed-text';
@@ -26,6 +26,7 @@ export default function ListsScreen() {
   const router = useRouter();
   const { session, signOut } = useAuth();
   const { lists, loading } = useLists();
+  const insets = useSafeAreaInsets();
 
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(EMOJIS[0]);
@@ -107,7 +108,7 @@ export default function ListsScreen() {
           <FlatList
             data={lists}
             keyExtractor={(l) => l.id}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + Spacing.four }]}
             ListEmptyComponent={
               <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
                 No lists yet. Create one above to get started.
