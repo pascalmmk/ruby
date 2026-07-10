@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { useColorScheme } from 'react-native';
 
 import { AuthGate } from '@/components/auth-gate';
+import { NotificationCenter } from '@/components/notification-center';
 import { AuthProvider } from '@/lib/auth';
 
 export default function RootLayout() {
@@ -15,6 +16,7 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="list/[id]" />
           </Stack>
+          <NotificationCenter />
         </AuthGate>
       </AuthProvider>
     </ThemeProvider>
