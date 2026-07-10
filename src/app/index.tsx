@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressableScale } from '@/components/pressable-scale';
 import { RubyLogo } from '@/components/ruby-logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -86,20 +87,17 @@ export default function ListsScreen() {
                 { color: theme.text, backgroundColor: theme.background, borderColor: theme.border },
               ]}
             />
-            <Pressable
+            <PressableScale
               onPress={handleCreate}
               disabled={creating || !name.trim()}
-              style={({ pressed }) => [
+              style={[
                 styles.addButton,
-                {
-                  backgroundColor: pressed ? theme.accentPressed : theme.accent,
-                  opacity: creating || !name.trim() ? 0.5 : 1,
-                },
+                { backgroundColor: theme.accent, opacity: creating || !name.trim() ? 0.5 : 1 },
               ]}>
               <ThemedText type="smallBold" style={[styles.addButtonText, { color: theme.onAccent }]}>
                 Create
               </ThemedText>
-            </Pressable>
+            </PressableScale>
           </View>
         </View>
 

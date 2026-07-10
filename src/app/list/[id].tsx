@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,6 +17,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Confetti } from '@/components/confetti';
+import { PressableScale } from '@/components/pressable-scale';
 import { ShareSheet } from '@/components/share-sheet';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -44,6 +46,19 @@ export default function ListDetailScreen() {
   }, [id]);
 
   const remaining = items.filter((i) => !i.is_done).length;
+  const allDone = items.length > 0 && remaining === 0;
+
+  // Fire a one-shot celebration the moment a list flips to fully complete.
+  const [burstKey, setBurstKey] = useState(0);
+  const celebratedRef = useRef(false);
+  useEffect(() => {
+    if (allDone && !celebratedRef.current) {
+      celebratedRef.current = true;
+      setBurstKey((k) => k + 1);
+    } else if (!allDone) {
+      celebratedRef.current = false;
+    }
+  }, [allDone]);
 
   async function handleAdd() {
     const trimmed = text.trim();
@@ -94,10 +109,21 @@ export default function ListDetailScreen() {
               {list?.name ?? 'List'}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              {remaining} of {items.length} left
+              {allDone ? 'All done 🎉' : `${remaining} of ${items.length} left`}
             </ThemedText>
           </View>
         </View>
+
+        {allDone ? (
+          <Animated.View
+            entering={FadeInDown.springify().damping(14)}
+            exiting={FadeOutUp.duration(160)}
+            style={[styles.doneBanner, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
+            <ThemedText type="smallBold" style={{ color: theme.accent }}>
+              🎉 Every item checked off — nice work!
+            </ThemedText>
+          </Animated.View>
+        ) : null}
 
         {shareOpen ? (
           <ShareSheet listId={id} isOwner={!!session && list?.owner_id === session.user.id} />
@@ -180,20 +206,21 @@ export default function ListDetailScreen() {
               { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
             ]}
           />
-          <Pressable
+          <PressableScale
             onPress={handleAdd}
             disabled={!text.trim()}
-            style={({ pressed }) => [
+            style={[
               styles.addButton,
-              { backgroundColor: pressed ? theme.accentPressed : theme.accent, opacity: text.trim() ? 1 : 0.5 },
+              { backgroundColor: theme.accent, opacity: text.trim() ? 1 : 0.5 },
             ]}>
             <ThemedText type="smallBold" style={[styles.addButtonText, { color: theme.onAccent }]}>
               Add
             </ThemedText>
-          </Pressable>
+          </PressableScale>
         </View>
       </SafeAreaView>
       </KeyboardAvoidingView>
+      {allDone ? <Confetti key={burstKey} /> : null}
     </ThemedView>
   );
 }
@@ -226,6 +253,15 @@ const styles = StyleSheet.create({
   },
   titleEmoji: { fontSize: 32 },
   titleTextWrap: { flex: 1, gap: 2 },
+  doneBanner: {
+    marginHorizontal: Spacing.three,
+    marginBottom: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+  },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listContent: { padding: Spacing.three, gap: Spacing.two },
   empty: { textAlign: 'center', marginTop: Spacing.five },

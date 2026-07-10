@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PressableScale } from '@/components/pressable-scale';
 import { RubyLogo } from '@/components/ruby-logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -102,13 +103,10 @@ export function SignInScreen() {
               </ThemedText>
             ) : null}
 
-            <Pressable
+            <PressableScale
               onPress={submit}
               disabled={busy}
-              style={({ pressed }) => [
-                styles.button,
-                { backgroundColor: pressed ? theme.accentPressed : theme.accent, opacity: busy ? 0.7 : 1 },
-              ]}>
+              style={[styles.button, { backgroundColor: theme.accent, opacity: busy ? 0.7 : 1 }]}>
               {busy ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
@@ -116,7 +114,7 @@ export function SignInScreen() {
                   {mode === 'signIn' ? 'Sign in' : 'Create account'}
                 </ThemedText>
               )}
-            </Pressable>
+            </PressableScale>
 
             <Pressable
               onPress={() => {

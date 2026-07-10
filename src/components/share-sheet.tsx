@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 
+import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -96,7 +97,7 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
                 { color: theme.text, backgroundColor: theme.background, borderColor: theme.border },
               ]}
             />
-            <Pressable
+            <PressableScale
               onPress={invite}
               disabled={busy || !email.trim()}
               style={[
@@ -110,7 +111,7 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
                   Invite
                 </ThemedText>
               )}
-            </Pressable>
+            </PressableScale>
           </View>
           {status ? (
             <ThemedText type="small" themeColor="textSecondary">
