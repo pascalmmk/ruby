@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -53,7 +54,10 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
   }
 
   return (
-    <View style={[styles.panel, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+    <Animated.View
+      entering={FadeInUp.duration(200)}
+      exiting={FadeOutUp.duration(150)}
+      style={[styles.panel, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       <ThemedText type="smallBold">Shared with</ThemedText>
 
       <View style={styles.members}>
@@ -119,7 +123,7 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
           Shared with you by the owner.
         </ThemedText>
       )}
-    </View>
+    </Animated.View>
   );
 }
 

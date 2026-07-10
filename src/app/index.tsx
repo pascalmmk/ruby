@@ -1,13 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RubyLogo } from '@/components/ruby-logo';
@@ -114,35 +108,38 @@ export default function ListsScreen() {
             <ActivityIndicator />
           </View>
         ) : (
-          <FlatList
+          <Animated.FlatList
             data={lists}
             keyExtractor={(l) => l.id}
+            itemLayoutAnimation={LinearTransition.springify().damping(18)}
             contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + Spacing.four }]}
             ListEmptyComponent={
               <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
                 No lists yet. Create one above to get started.
               </ThemedText>
             }
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => router.push(`/list/${item.id}`)}
-                style={({ pressed }) => [
-                  styles.listRow,
-                  {
-                    backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
-                    borderColor: theme.border,
-                  },
-                ]}>
-                <View style={[styles.listEmojiWrap, { backgroundColor: theme.accentSoft }]}>
-                  <ThemedText style={styles.listEmoji}>{item.emoji}</ThemedText>
-                </View>
-                <ThemedText type="default" style={styles.listName}>
-                  {item.name}
-                </ThemedText>
-                <ThemedText type="subtitle" themeColor="textSecondary" style={styles.chevron}>
-                  ›
-                </ThemedText>
-              </Pressable>
+            renderItem={({ item, index }) => (
+              <Animated.View entering={FadeInDown.duration(280).delay(Math.min(index * 45, 270))}>
+                <Pressable
+                  onPress={() => router.push(`/list/${item.id}`)}
+                  style={({ pressed }) => [
+                    styles.listRow,
+                    {
+                      backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
+                      borderColor: theme.border,
+                    },
+                  ]}>
+                  <View style={[styles.listEmojiWrap, { backgroundColor: theme.accentSoft }]}>
+                    <ThemedText style={styles.listEmoji}>{item.emoji}</ThemedText>
+                  </View>
+                  <ThemedText type="default" style={styles.listName}>
+                    {item.name}
+                  </ThemedText>
+                  <ThemedText type="subtitle" themeColor="textSecondary" style={styles.chevron}>
+                    ›
+                  </ThemedText>
+                </Pressable>
+              </Animated.View>
             )}
           />
         )}

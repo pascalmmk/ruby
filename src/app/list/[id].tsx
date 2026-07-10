@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,6 +9,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeOutUp,
+  LinearTransition,
+  ZoomIn,
+} from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ShareSheet } from '@/components/share-sheet';
@@ -103,19 +108,23 @@ export default function ListDetailScreen() {
             <ActivityIndicator />
           </View>
         ) : (
-          <FlatList
+          <Animated.FlatList
             data={items}
             style={styles.flex}
             keyExtractor={(i) => i.id}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.listContent}
+            itemLayoutAnimation={LinearTransition.springify().damping(18)}
             ListEmptyComponent={
               <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
                 Nothing here yet. Add the first item below.
               </ThemedText>
             }
             renderItem={({ item }) => (
-              <View style={[styles.itemRow, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+              <Animated.View
+                entering={FadeInDown.duration(220)}
+                exiting={FadeOutUp.duration(180)}
+                style={[styles.itemRow, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
                 <Pressable onPress={() => handleToggle(item)} hitSlop={8} style={styles.checkWrap}>
                   <View
                     style={[
@@ -125,7 +134,11 @@ export default function ListDetailScreen() {
                         backgroundColor: item.is_done ? theme.accent : 'transparent',
                       },
                     ]}>
-                    {item.is_done ? <ThemedText style={styles.check}>✓</ThemedText> : null}
+                    {item.is_done ? (
+                      <Animated.View entering={ZoomIn.springify().damping(12)}>
+                        <ThemedText style={styles.check}>✓</ThemedText>
+                      </Animated.View>
+                    ) : null}
                   </View>
                 </Pressable>
                 <ThemedText
@@ -141,7 +154,7 @@ export default function ListDetailScreen() {
                     ✕
                   </ThemedText>
                 </Pressable>
-              </View>
+              </Animated.View>
             )}
           />
         )}
