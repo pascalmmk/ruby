@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
+import { registerPushToken } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 
 type Toast = { id: number; title: string; body: string };
@@ -31,6 +32,9 @@ export function NotificationCenter() {
 
   useEffect(() => {
     if (!session) return;
+
+    // Register this device for push notifications (no-op in Expo Go / web).
+    registerPushToken(session.user.id);
 
     const channel = supabase
       .channel('global-item-inserts')

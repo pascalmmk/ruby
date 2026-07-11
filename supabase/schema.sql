@@ -222,3 +222,81 @@ alter publication supabase_realtime add table public.list_members;
 -- id, so any realtime subscription filtered by another column (e.g. list_id)
 -- silently drops deletes.
 alter table public.items replica identity full;
+
+-- ---------------------------------------------------------------------------
+-- Push notifications
+-- Each device registers its Expo push token here; a trigger on `items` calls
+-- the Expo Push API directly via pg_net whenever someone adds an item, so no
+-- separate server / Edge Function is needed.
+-- ---------------------------------------------------------------------------
+
+create extension if not exists pg_net with schema extensions;
+
+create table if not exists public.push_tokens (
+  user_id uuid not null references auth.users on delete cascade,
+  token text not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, token)
+);
+
+alter table public.push_tokens enable row level security;
+
+drop policy if exists push_tokens_select on public.push_tokens;
+create policy push_tokens_select on public.push_tokens
+  for select to authenticated using (user_id = auth.uid());
+
+drop policy if exists push_tokens_insert on public.push_tokens;
+create policy push_tokens_insert on public.push_tokens
+  for insert to authenticated with check (user_id = auth.uid());
+
+drop policy if exists push_tokens_update on public.push_tokens;
+create policy push_tokens_update on public.push_tokens
+  for update to authenticated using (user_id = auth.uid());
+
+drop policy if exists push_tokens_delete on public.push_tokens;
+create policy push_tokens_delete on public.push_tokens
+  for delete to authenticated using (user_id = auth.uid());
+
+-- On item insert, push to every other member of the list who has a token.
+create or replace function public.notify_item_added()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _list record;
+  _adder text;
+  _messages jsonb;
+begin
+  select name, emoji into _list from lists where id = new.list_id;
+  select coalesce(display_name, 'Someone') into _adder from profiles where id = new.created_by;
+
+  select jsonb_agg(jsonb_build_object(
+    'to', pt.token,
+    'title', coalesce(_list.emoji, '💎') || ' ' || coalesce(_list.name, 'Shared list'),
+    'body', _adder || ' added “' || new.text || '”',
+    'sound', 'default'
+  ))
+  into _messages
+  from list_members lm
+  join push_tokens pt on pt.user_id = lm.user_id
+  where lm.list_id = new.list_id
+    and lm.user_id <> new.created_by;
+
+  if _messages is not null then
+    perform net.http_post(
+      url := 'https://exp.host/--/api/v2/push/send',
+      headers := jsonb_build_object('Content-Type', 'application/json'),
+      body := _messages
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_item_added_notify on public.items;
+create trigger on_item_added_notify
+  after insert on public.items
+  for each row execute function public.notify_item_added();
