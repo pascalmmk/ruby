@@ -7,7 +7,6 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
-import { initNotifications, notifyLocal } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 
 type Toast = { id: number; title: string; body: string };
@@ -25,7 +24,6 @@ export function NotificationCenter() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    initNotifications();
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
@@ -52,8 +50,6 @@ export function NotificationCenter() {
           const who = profile?.display_name ?? 'Someone';
           const title = `${list?.emoji ?? '💎'} ${list?.name ?? 'Shared list'}`;
           const body = `${who} added “${item.text}”`;
-
-          notifyLocal(title, body);
 
           setToast({ id: Date.now(), title, body });
           if (timer.current) clearTimeout(timer.current);
