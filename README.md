@@ -13,6 +13,18 @@ everyone's devices in under a second. Built with Expo (React Native) and Supabas
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/lists.png" width="30%" alt="My Lists screen" />
+  &nbsp;
+  <img src="docs/screenshots/list-detail.png" width="30%" alt="A shared list with items" />
+  &nbsp;
+  <img src="docs/screenshots/completed.png" width="30%" alt="Completed list with celebration" />
+</p>
+
+---
+
 ## Features
 
 - **⚡ Real-time sync** — adding, checking off, and deleting items propagate live to every
