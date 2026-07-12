@@ -5,6 +5,7 @@ import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { PressableScale } from '@/components/pressable-scale';
 import { RubyLogo } from '@/components/ruby-logo';
 import { ThemedText } from '@/components/themed-text';
@@ -13,6 +14,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useLists } from '@/hooks/use-lists';
 import { useAuth } from '@/lib/auth';
+import { useProfile } from '@/lib/profile';
 import { createList, deleteList } from '@/lib/queries';
 import type { List } from '@/lib/types';
 
@@ -21,7 +23,8 @@ const EMOJIS = ['🛒', '📝', '✅', '🧳', '🎁', '🍳', '🏠', '💪'];
 export default function ListsScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { session, signOut } = useAuth();
+  const { session } = useAuth();
+  const { profile } = useProfile();
   const { lists, loading, refresh } = useLists();
   const insets = useSafeAreaInsets();
 
@@ -122,10 +125,8 @@ export default function ListsScreen() {
             <RubyLogo size={30} />
             <ThemedText type="subtitle">Ruby</ThemedText>
           </View>
-          <Pressable onPress={signOut} hitSlop={8}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Sign out
-            </ThemedText>
+          <Pressable onPress={() => router.push('/profile')} hitSlop={8}>
+            <Avatar name={profile?.display_name ?? session?.user.email} url={profile?.avatar_url} size={36} />
           </Pressable>
         </View>
 

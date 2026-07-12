@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthGate } from '@/components/auth-gate';
 import { NotificationCenter } from '@/components/notification-center';
 import { AuthProvider } from '@/lib/auth';
+import { ProfileProvider } from '@/lib/profile';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -14,11 +15,14 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AuthProvider>
           <AuthGate>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="list/[id]" />
-            </Stack>
-            <NotificationCenter />
+            <ProfileProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="list/[id]" />
+                <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
+              </Stack>
+              <NotificationCenter />
+            </ProfileProvider>
           </AuthGate>
         </AuthProvider>
       </ThemeProvider>

@@ -2,15 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 
+import { Avatar } from '@/components/avatar';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchMembers, shareList, type Member } from '@/lib/queries';
-
-function initials(name: string) {
-  return name.trim().slice(0, 2).toUpperCase() || '?';
-}
 
 export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boolean }) {
   const theme = useTheme();
@@ -68,11 +65,7 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
       <View style={styles.members}>
         {members.map((m) => (
           <View key={m.user_id} style={styles.member}>
-            <View style={[styles.avatar, { backgroundColor: theme.accent }]}>
-              <ThemedText type="small" style={styles.avatarText}>
-                {initials(m.display_name)}
-              </ThemedText>
-            </View>
+            <Avatar name={m.display_name} url={m.avatar_url} size={28} />
             <ThemedText type="small">{m.display_name}</ThemedText>
             {m.role === 'owner' ? (
               <ThemedText type="small" themeColor="textSecondary">

@@ -1,3 +1,5 @@
+import { decode } from 'base64-arraybuffer';
+
 import { supabase } from '@/lib/supabase';
 import type { Item, List } from '@/lib/types';
 
@@ -81,7 +83,12 @@ export async function deleteItem(id: string): Promise<void> {
 
 // ---- Sharing ---------------------------------------------------------------
 
-export type Member = { user_id: string; role: string; display_name: string };
+export type Member = {
+  user_id: string;
+  role: string;
+  display_name: string;
+  avatar_url: string | null;
+};
 
 export type ShareResult = 'added' | 'not_found' | 'self';
 
@@ -106,13 +113,56 @@ export async function fetchMembers(listId: string): Promise<Member[]> {
 
   const { data: profiles, error: profileError } = await supabase
     .from('profiles')
-    .select('id, display_name')
+    .select('id, display_name, avatar_url')
     .in('id', ids);
   if (profileError) throw profileError;
 
-  return (members ?? []).map((m) => ({
-    user_id: m.user_id,
-    role: m.role,
-    display_name: profiles?.find((p) => p.id === m.user_id)?.display_name ?? 'Someone',
-  }));
+  return (members ?? []).map((m) => {
+    const p = profiles?.find((x) => x.id === m.user_id);
+    return {
+      user_id: m.user_id,
+      role: m.role,
+      display_name: p?.display_name ?? 'Someone',
+      avatar_url: p?.avatar_url ?? null,
+    };
+  });
+}
+
+// ---- Profile ---------------------------------------------------------------
+
+export type Profile = { id: string; display_name: string | null; avatar_url: string | null };
+
+export async function fetchProfile(userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProfile(
+  userId: string,
+  fields: { display_name?: string; avatar_url?: string },
+): Promise<void> {
+  const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
+  if (error) throw error;
+}
+
+/** Upload an avatar (from image-picker base64) to Storage and return its public URL. */
+export async function uploadAvatar(
+  userId: string,
+  base64: string,
+  contentType = 'image/jpeg',
+): Promise<string> {
+  const ext = (contentType.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+  const path = `${userId}/avatar.${ext}`;
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, decode(base64), { contentType, upsert: true });
+  if (error) throw error;
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  // cache-buster so the new image shows immediately
+  return `${data.publicUrl}?v=${Date.now()}`;
 }
