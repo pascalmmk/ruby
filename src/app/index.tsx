@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,7 +13,8 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useLists } from '@/hooks/use-lists';
 import { useAuth } from '@/lib/auth';
-import { createList } from '@/lib/queries';
+import { createList, deleteList } from '@/lib/queries';
+import type { List } from '@/lib/types';
 
 const EMOJIS = ['🛒', '📝', '✅', '🧳', '🎁', '🍳', '🏠', '💪'];
 
@@ -20,7 +22,7 @@ export default function ListsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { session, signOut } = useAuth();
-  const { lists, loading } = useLists();
+  const { lists, loading, refresh } = useLists();
   const insets = useSafeAreaInsets();
 
   const [name, setName] = useState('');
@@ -41,6 +43,75 @@ export default function ListsScreen() {
     } finally {
       setCreating(false);
     }
+  }
+
+  function requestDelete(list: List) {
+    const doDelete = async () => {
+      try {
+        await deleteList(list.id);
+        refresh();
+      } catch (err) {
+        console.warn('Could not delete list', err);
+      }
+    };
+    const message = `Delete "${list.name}"? This permanently removes the list and all its items for everyone it's shared with.`;
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(message)) doDelete();
+    } else {
+      Alert.alert('Delete list', message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
+  }
+
+  function renderDeleteAction() {
+    return (
+      <View style={[styles.deleteAction, { backgroundColor: theme.accent }]}>
+        <ThemedText type="smallBold" style={styles.deleteActionText}>
+          Delete
+        </ThemedText>
+      </View>
+    );
+  }
+
+  function renderRow(item: List) {
+    const owner = item.owner_id === session?.user.id;
+    return (
+      <Pressable
+        onPress={() => router.push(`/list/${item.id}`)}
+        style={({ pressed }) => [
+          styles.listRow,
+          {
+            backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
+            borderColor: theme.border,
+          },
+        ]}>
+        <View style={[styles.listEmojiWrap, { backgroundColor: theme.accentSoft }]}>
+          <ThemedText style={styles.listEmoji}>{item.emoji}</ThemedText>
+        </View>
+        <ThemedText type="default" style={styles.listName}>
+          {item.name}
+        </ThemedText>
+        {Platform.OS === 'web' && owner ? (
+          <Pressable
+            onPress={(e) => {
+              (e as unknown as { stopPropagation?: () => void }).stopPropagation?.();
+              requestDelete(item);
+            }}
+            hitSlop={10}
+            style={styles.webDelete}>
+            <ThemedText type="default" themeColor="textSecondary">
+              ✕
+            </ThemedText>
+          </Pressable>
+        ) : (
+          <ThemedText type="subtitle" themeColor="textSecondary" style={styles.chevron}>
+            ›
+          </ThemedText>
+        )}
+      </Pressable>
+    );
   }
 
   return (
@@ -116,29 +187,30 @@ export default function ListsScreen() {
                 No lists yet. Create one above to get started.
               </ThemedText>
             }
-            renderItem={({ item, index }) => (
-              <Animated.View entering={FadeInDown.duration(280).delay(Math.min(index * 45, 270))}>
-                <Pressable
-                  onPress={() => router.push(`/list/${item.id}`)}
-                  style={({ pressed }) => [
-                    styles.listRow,
-                    {
-                      backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
-                      borderColor: theme.border,
-                    },
-                  ]}>
-                  <View style={[styles.listEmojiWrap, { backgroundColor: theme.accentSoft }]}>
-                    <ThemedText style={styles.listEmoji}>{item.emoji}</ThemedText>
-                  </View>
-                  <ThemedText type="default" style={styles.listName}>
-                    {item.name}
-                  </ThemedText>
-                  <ThemedText type="subtitle" themeColor="textSecondary" style={styles.chevron}>
-                    ›
-                  </ThemedText>
-                </Pressable>
-              </Animated.View>
-            )}
+            renderItem={({ item, index }) => {
+              const owner = item.owner_id === session?.user.id;
+              return (
+                <Animated.View entering={FadeInDown.duration(280).delay(Math.min(index * 45, 270))}>
+                  {Platform.OS !== 'web' && owner ? (
+                    <Swipeable
+                      renderLeftActions={renderDeleteAction}
+                      leftThreshold={70}
+                      overshootLeft={false}
+                      friction={1.6}
+                      onSwipeableOpen={(direction, swipeable) => {
+                        if (direction === 'left') {
+                          requestDelete(item);
+                          swipeable.close();
+                        }
+                      }}>
+                      {renderRow(item)}
+                    </Swipeable>
+                  ) : (
+                    renderRow(item)
+                  )}
+                </Animated.View>
+              );
+            }}
           />
         )}
       </SafeAreaView>
@@ -213,4 +285,13 @@ const styles = StyleSheet.create({
   listEmoji: { fontSize: 24 },
   listName: { flex: 1 },
   chevron: { fontSize: 28, lineHeight: 30, marginTop: -4 },
+  webDelete: { padding: Spacing.one },
+  deleteAction: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.four,
+    marginRight: Spacing.two,
+    borderRadius: Spacing.four,
+  },
+  deleteActionText: { color: '#ffffff' },
 });
