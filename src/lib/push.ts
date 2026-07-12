@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
 
@@ -33,20 +33,29 @@ export async function registerPushToken(userId: string): Promise<void> {
 
     let granted = (await Notifications.getPermissionsAsync()).granted;
     if (!granted) granted = (await Notifications.requestPermissionsAsync()).granted;
-    if (!granted) return;
+    if (!granted) {
+      Alert.alert('Ruby diagnostics', 'Notification permission NOT granted.');
+      return;
+    }
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
     if (!projectId) {
-      console.warn('No EAS projectId — run `eas init` before building to enable push tokens.');
+      Alert.alert('Ruby diagnostics', 'No EAS projectId found in app config.');
       return;
     }
 
     const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-    await supabase.from('push_tokens').upsert(
+    const { error } = await supabase.from('push_tokens').upsert(
       { user_id: userId, token, updated_at: new Date().toISOString() },
       { onConflict: 'user_id,token' },
     );
+    if (error) {
+      Alert.alert('Ruby diagnostics', 'Saving token failed: ' + error.message);
+    } else {
+      Alert.alert('Ruby diagnostics', 'Push token registered ✅');
+    }
   } catch (err) {
+    Alert.alert('Ruby diagnostics', 'getExpoPushToken failed: ' + (err instanceof Error ? err.message : String(err)));
     console.warn('Push registration failed', err);
   }
 }
