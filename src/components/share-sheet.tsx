@@ -48,7 +48,11 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
         setStatus(`That's you — you already own this list`);
       }
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Could not invite');
+      const message =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Could not invite';
+      setStatus(message);
     } finally {
       setBusy(false);
     }
