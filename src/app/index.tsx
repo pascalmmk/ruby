@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,16 +67,6 @@ export default function ListsScreen() {
         { text: 'Delete', style: 'destructive', onPress: doDelete },
       ]);
     }
-  }
-
-  function renderDeleteAction() {
-    return (
-      <View style={[styles.deleteAction, { backgroundColor: theme.accent }]}>
-        <ThemedText type="smallBold" style={styles.deleteActionText}>
-          Delete
-        </ThemedText>
-      </View>
-    );
   }
 
   function renderRow(item: List) {
@@ -194,16 +185,21 @@ export default function ListsScreen() {
                 <Animated.View entering={FadeInDown.duration(280).delay(Math.min(index * 45, 270))}>
                   {Platform.OS !== 'web' && owner ? (
                     <Swipeable
-                      renderLeftActions={renderDeleteAction}
-                      leftThreshold={70}
+                      renderLeftActions={(_progress, _translation, swipeable) => (
+                        <RectButton
+                          style={[styles.deleteAction, { backgroundColor: theme.accent }]}
+                          onPress={() => {
+                            swipeable.close();
+                            requestDelete(item);
+                          }}>
+                          <ThemedText type="smallBold" style={styles.deleteActionText}>
+                            Delete
+                          </ThemedText>
+                        </RectButton>
+                      )}
+                      leftThreshold={40}
                       overshootLeft={false}
-                      friction={1.6}
-                      onSwipeableOpen={(direction, swipeable) => {
-                        if (direction === 'left') {
-                          requestDelete(item);
-                          swipeable.close();
-                        }
-                      }}>
+                      friction={1.6}>
                       {renderRow(item)}
                     </Swipeable>
                   ) : (
