@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Avatar } from '@/components/avatar';
 import { PressableScale } from '@/components/pressable-scale';
 import { RubyLogo } from '@/components/ruby-logo';
+import { SwipeDeleteAction } from '@/components/swipe-delete-action';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -185,21 +185,20 @@ export default function ListsScreen() {
                 <Animated.View entering={FadeInDown.duration(280).delay(Math.min(index * 45, 270))}>
                   {Platform.OS !== 'web' && owner ? (
                     <Swipeable
-                      renderLeftActions={(_progress, _translation, swipeable) => (
-                        <RectButton
-                          style={[styles.deleteAction, { backgroundColor: theme.accent }]}
-                          onPress={() => {
+                      renderLeftActions={(_progress, translation, swipeable) => (
+                        <SwipeDeleteAction
+                          translation={translation}
+                          color={theme.accent}
+                          onTrigger={() => {
                             swipeable.close();
                             requestDelete(item);
-                          }}>
-                          <ThemedText type="smallBold" style={styles.deleteActionText}>
-                            Delete
-                          </ThemedText>
-                        </RectButton>
+                          }}
+                        />
                       )}
-                      leftThreshold={40}
+                      // Never latch open — swiping far enough deletes, otherwise it springs back.
+                      leftThreshold={100000}
                       overshootLeft={false}
-                      friction={1.6}>
+                      friction={1}>
                       {renderRow(item)}
                     </Swipeable>
                   ) : (
@@ -283,12 +282,4 @@ const styles = StyleSheet.create({
   listName: { flex: 1 },
   chevron: { fontSize: 28, lineHeight: 30, marginTop: -4 },
   webDelete: { padding: Spacing.one },
-  deleteAction: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    marginRight: Spacing.two,
-    borderRadius: Spacing.four,
-  },
-  deleteActionText: { color: '#ffffff' },
 });
