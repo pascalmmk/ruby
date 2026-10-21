@@ -21,6 +21,7 @@ export function PressableScale({ style, scaleTo = 0.95, onPressIn, onPressOut, .
 
   return (
     <AnimatedPressable
+      accessibilityRole="button"
       onPressIn={(e) => {
         scale.value = withSpring(scaleTo, SPRING);
         onPressIn?.(e);

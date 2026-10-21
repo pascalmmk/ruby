@@ -1,3 +1,4 @@
+import { subscribeOffline } from '@/lib/offline';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -38,15 +39,21 @@ export default function ListDetailScreen() {
   const { items, loading } = useItems(id);
   const [list, setList] = useState<List | null>(null);
   const [text, setText] = useState('');
+  const [error, setError] = useState('');
+  const [adding, setAdding] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    fetchList(id).then(setList).catch((err) => console.warn('Failed to load list', err));
+    const refresh = () => { void fetchList(id).then(setList).catch(console.warn); };
+    refresh();
+    return subscribeOffline(refresh);
   }, [id]);
 
   const remaining = items.filter((i) => !i.is_done).length;
   const allDone = items.length > 0 && remaining === 0;
+  const [view, setView] = useState<'All' | 'To do' | 'Done'>('All');
+  const shownItems = items.filter(item => view === 'All' || (view === 'Done' ? item.is_done : !item.is_done));
 
   // Fire a one-shot celebration the moment a list flips to fully complete.
   const [burstKey, setBurstKey] = useState(0);
@@ -62,13 +69,18 @@ export default function ListDetailScreen() {
 
   async function handleAdd() {
     const trimmed = text.trim();
-    if (!trimmed || !session) return;
+    if (!trimmed || !session || !list || adding) return;
     setText('');
+    setAdding(true);
+    setError('');
     try {
       await addItem(id, trimmed, session.user.id);
+      setView('To do');
     } catch (err) {
-      console.warn('Could not add item', err);
+      setError('Could not save this item. Please try again.');
       setText(trimmed);
+    } finally {
+      setAdding(false);
     }
   }
 
@@ -77,7 +89,7 @@ export default function ListDetailScreen() {
     try {
       await toggleItem(item, session.user.id);
     } catch (err) {
-      console.warn('Could not toggle item', err);
+      setError('Could not save the completion change. Please try again.');
     }
   }
 
@@ -88,25 +100,25 @@ export default function ListDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/')} hitSlop={8} style={styles.back}>
             <ThemedText type="default" themeColor="textSecondary">
               ‹ Lists
             </ThemedText>
           </Pressable>
-          <Pressable onPress={() => setShareOpen((v) => !v)} hitSlop={8} style={styles.back}>
+          <Pressable disabled={!list} onPress={() => setShareOpen((v) => !v)} hitSlop={8} style={styles.back}>
             <ThemedText type="default" themeColor="textSecondary">
               {shareOpen ? 'Close' : 'Share'}
             </ThemedText>
           </Pressable>
         </View>
 
-        <View style={styles.titleRow}>
+        <View style={[styles.titleRow, { backgroundColor: theme.tileRose }]}>
           <View style={[styles.titleEmojiWrap, { backgroundColor: theme.accentSoft }]}>
             <ThemedText style={styles.titleEmoji}>{list?.emoji ?? '📝'}</ThemedText>
           </View>
           <View style={styles.titleTextWrap}>
             <ThemedText type="subtitle" numberOfLines={1}>
-              {list?.name ?? 'List'}
+              {list?.name ?? 'List unavailable'}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {allDone ? 'All done 🎉' : `${remaining} of ${items.length} left`}
@@ -114,6 +126,13 @@ export default function ListDetailScreen() {
           </View>
         </View>
 
+        {!list && <ThemedText style={{ paddingHorizontal: 24 }} themeColor="textSecondary">This list has not loaded or is no longer available. Connect to sync, or return to your lists.</ThemedText>}
+        {error ? <ThemedText accessibilityRole="alert" style={{ paddingHorizontal: 24 }} themeColor="accent">{error}</ThemedText> : null}
+        <View style={styles.progressSection}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><ThemedText type="small" themeColor="textSecondary">A little progress, every day</ThemedText><ThemedText type="smallBold" themeColor="accent">{items.length ? Math.round((items.length - remaining) / items.length * 100) : 0}%</ThemedText></View>
+          <View style={[styles.progressTrack, { backgroundColor: theme.backgroundSelected }]}><View style={{ height: 6, borderRadius: 6, backgroundColor: theme.accent, width: `${items.length ? (items.length - remaining) / items.length * 100 : 0}%` }} /></View>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>{(['All', 'To do', 'Done'] as const).map(label => <Pressable key={label} accessibilityRole="button" accessibilityState={{ selected: view === label }} onPress={() => setView(label)} style={[styles.tab, { backgroundColor: view === label ? theme.text : theme.backgroundSelected }]}><ThemedText type="small" style={{ color: view === label ? theme.background : theme.textSecondary }}>{label} · {label === 'All' ? items.length : label === 'Done' ? items.length - remaining : remaining}</ThemedText></Pressable>)}</View>
+        </View>
         {allDone ? (
           <Animated.View
             entering={FadeInDown.springify().damping(14)}
@@ -135,7 +154,7 @@ export default function ListDetailScreen() {
           </View>
         ) : (
           <Animated.FlatList
-            data={items}
+            data={shownItems}
             style={styles.flex}
             keyExtractor={(i) => i.id}
             keyboardShouldPersistTaps="handled"
@@ -143,15 +162,15 @@ export default function ListDetailScreen() {
             itemLayoutAnimation={LinearTransition.springify().damping(18)}
             ListEmptyComponent={
               <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
-                Nothing here yet. Add the first item below.
+                {items.length ? 'Nothing in this view. A little breathing room.' : 'A fresh page for your plans. Add your first item below.'}
               </ThemedText>
             }
             renderItem={({ item }) => (
               <Animated.View
                 entering={FadeInDown.duration(220)}
                 exiting={FadeOutUp.duration(180)}
-                style={[styles.itemRow, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-                <Pressable onPress={() => handleToggle(item)} hitSlop={8} style={styles.checkWrap}>
+                style={[styles.itemRow, { backgroundColor: theme.taskSurface, borderColor: theme.taskSurface }]}>
+                <Pressable accessibilityRole="checkbox" accessibilityLabel={item.text} accessibilityState={{ checked: item.is_done }} onPress={() => handleToggle(item)} hitSlop={8} style={[styles.checkWrap, { backgroundColor: theme.backgroundElement }]}>
                   <View
                     style={[
                       styles.checkbox,
@@ -162,7 +181,7 @@ export default function ListDetailScreen() {
                     ]}>
                     {item.is_done ? (
                       <Animated.View entering={ZoomIn.springify().damping(12)}>
-                        <ThemedText style={styles.check}>✓</ThemedText>
+                        <ThemedText style={[styles.check, { color: theme.onAccent }]}>✓</ThemedText>
                       </Animated.View>
                     ) : null}
                   </View>
@@ -175,7 +194,7 @@ export default function ListDetailScreen() {
                   ]}>
                   {item.text}
                 </ThemedText>
-                <Pressable onPress={() => deleteItem(item.id)} hitSlop={8}>
+                <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${item.text}`} onPress={() => { void deleteItem(item.id).catch(() => setError('Could not delete this item. Please try again.')); }} hitSlop={8} style={{ padding: 10 }}>
                   <ThemedText type="default" themeColor="textSecondary">
                     ✕
                   </ThemedText>
@@ -194,9 +213,10 @@ export default function ListDetailScreen() {
             },
           ]}>
           <TextInput
+            editable={!adding}
             value={text}
             onChangeText={setText}
-            placeholder="Add an item…"
+            accessibilityLabel="New item" placeholder="What needs doing?"
             placeholderTextColor={theme.textSecondary}
             onSubmitEditing={handleAdd}
             returnKeyType="done"
@@ -208,7 +228,7 @@ export default function ListDetailScreen() {
           />
           <PressableScale
             onPress={handleAdd}
-            disabled={!text.trim()}
+            disabled={!text.trim() || !list || adding}
             style={[
               styles.addButton,
               { backgroundColor: theme.accent, opacity: text.trim() ? 1 : 0.5 },
@@ -228,13 +248,13 @@ export default function ListDetailScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
-  safe: { flex: 1, maxWidth: 640, width: '100%', alignSelf: 'center' },
+  safe: { flex: 1, maxWidth: 820, width: '100%', alignSelf: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
+    paddingTop: Spacing.four,
   },
   back: { alignSelf: 'flex-start', paddingVertical: Spacing.one },
   titleRow: {
@@ -242,8 +262,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.four,
+    marginHorizontal: 16,
+    marginTop: 20,
+    borderRadius: 30,
   },
+  progressSection: { paddingHorizontal: 24, gap: 10, paddingVertical: 20 },
+  progressTrack: { height: 6, borderRadius: 6 },
+  tab: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24 },
   titleEmojiWrap: {
     width: 56,
     height: 56,
@@ -270,15 +296,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     padding: Spacing.three,
-    borderRadius: Spacing.four,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 30,
+    borderWidth: 0,
   },
-  checkWrap: { padding: 2 },
+  checkWrap: { padding: 12, borderRadius: 26 },
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
+    borderRadius: 14,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -292,15 +318,15 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    borderRadius: Spacing.three,
+    borderRadius: 27,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
-    minHeight: 46,
+    minHeight: 54,
   },
   addButton: {
-    borderRadius: Spacing.two,
+    borderRadius: 26,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',

@@ -1,86 +1,28 @@
 import { decode } from 'base64-arraybuffer';
-
 import { supabase } from '@/lib/supabase';
 import type { Item, List } from '@/lib/types';
+import { localChange, localId, offlineSnapshot, syncOffline } from './offline';
 
-// ---- Lists -----------------------------------------------------------------
-
-export async function fetchLists(): Promise<List[]> {
-  const { data, error } = await supabase
-    .from('lists')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data ?? [];
-}
-
-export async function fetchList(id: string): Promise<List | null> {
-  const { data, error } = await supabase.from('lists').select('*').eq('id', id).maybeSingle();
-  if (error) throw error;
-  return data;
-}
-
+export async function fetchLists(): Promise<List[]> { return offlineSnapshot().lists; }
+export async function fetchList(id: string): Promise<List | null> { return offlineSnapshot().lists.find((r) => r.id === id) ?? null; }
+export async function fetchItems(listId: string): Promise<Item[]> { return offlineSnapshot().items.filter((r) => r.list_id === listId); }
 export async function createList(name: string, emoji: string, ownerId: string): Promise<List> {
-  // Insert without RETURNING, then read the row back in a separate request. A
-  // combined insert().select() can trip the lists SELECT policy on the freshly
-  // inserted row inside the same statement; two steps sidesteps that entirely.
-  const { error } = await supabase.from('lists').insert({ name, emoji, owner_id: ownerId });
-  if (error) throw error;
-
-  const { data, error: selectError } = await supabase
-    .from('lists')
-    .select('*')
-    .eq('owner_id', ownerId)
-    .eq('name', name)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-  if (selectError) throw selectError;
-  return data;
+  const row: List = { id: localId(), name, emoji, owner_id: ownerId, created_at: new Date().toISOString() };
+  await localChange({ table: 'lists', kind: 'insert', id: row.id, values: row });
+  return row;
 }
-
-export async function deleteList(id: string): Promise<void> {
-  const { error } = await supabase.from('lists').delete().eq('id', id);
-  if (error) throw error;
-}
-
-// ---- Items -----------------------------------------------------------------
-
-export async function fetchItems(listId: string): Promise<Item[]> {
-  const { data, error } = await supabase
-    .from('items')
-    .select('*')
-    .eq('list_id', listId)
-    .order('position', { ascending: true })
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  return data ?? [];
-}
-
+export async function deleteList(id: string): Promise<void> { await localChange({ table: 'lists', kind: 'delete', id }); }
 export async function addItem(listId: string, text: string, userId: string): Promise<Item> {
-  const { data, error } = await supabase
-    .from('items')
-    .insert({ list_id: listId, text, created_by: userId, position: Date.now() })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+  if (!offlineSnapshot().lists.some((list) => list.id === listId)) throw new Error('This list is not available on this device.');
+  if (!text.trim()) throw new Error('Enter an item first.');
+  const row: Item = { id: localId(), list_id: listId, text, created_by: userId, position: Date.now(), is_done: false, done_by: null, created_at: new Date().toISOString() };
+  await localChange({ table: 'items', kind: 'insert', id: row.id, values: row });
+  return row;
 }
-
 export async function toggleItem(item: Item, userId: string): Promise<void> {
-  const nextDone = !item.is_done;
-  const { error } = await supabase
-    .from('items')
-    .update({ is_done: nextDone, done_by: nextDone ? userId : null })
-    .eq('id', item.id);
-  if (error) throw error;
+  await localChange({ table: 'items', kind: 'update', id: item.id, values: { is_done: !item.is_done, done_by: !item.is_done ? userId : null } });
 }
-
-export async function deleteItem(id: string): Promise<void> {
-  const { error } = await supabase.from('items').delete().eq('id', id);
-  if (error) throw error;
-}
-
+export async function deleteItem(id: string): Promise<void> { await localChange({ table: 'items', kind: 'delete', id }); }
 // ---- Sharing ---------------------------------------------------------------
 
 export type Member = {
@@ -93,6 +35,10 @@ export type Member = {
 export type ShareResult = 'added' | 'not_found' | 'self';
 
 export async function shareList(listId: string, email: string): Promise<ShareResult> {
+  await syncOffline();
+  if (offlineSnapshot().pending.some((op) => op.table === 'lists' && op.id === listId)) {
+    throw new Error('This list is saved on your device. Wait for it to sync before inviting someone.');
+  }
   const { data, error } = await supabase.rpc('add_list_member', {
     _list_id: listId,
     _email: email,

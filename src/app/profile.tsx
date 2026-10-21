@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -25,6 +25,12 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+
+  const editedName = useRef(false);
+  useEffect(() => {
+    if (!editedName.current) setName(profile?.display_name ?? '');
+    setAvatarUrl(profile?.avatar_url ?? null);
+  }, [profile?.display_name, profile?.avatar_url]);
 
   async function pickAvatar() {
     if (!session || uploading) return;
@@ -81,7 +87,7 @@ export default function ProfileScreen() {
     <ThemedView style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/')} hitSlop={8}>
             <ThemedText type="default" themeColor="textSecondary">
               ‹ Back
             </ThemedText>
@@ -90,6 +96,8 @@ export default function ProfileScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
+        <ScrollView contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
+        <View style={[styles.profileIntro, { backgroundColor: theme.accentSoft }]}><ThemedText style={styles.eyebrow} themeColor="accent">YOUR CORNER OF RUBY</ThemedText><ThemedText style={styles.title}>A little more you.</ThemedText><ThemedText themeColor="textSecondary">The face and name behind your shared lists.</ThemedText></View>
         <View style={styles.avatarWrap}>
           <Pressable onPress={pickAvatar} disabled={uploading}>
             <Avatar name={name || profile?.display_name} url={avatarUrl} size={108} />
@@ -106,11 +114,11 @@ export default function ProfileScreen() {
           </ThemedText>
         </View>
 
-        <View style={styles.form}>
+        <View style={[styles.form, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
           <ThemedText type="smallBold">Username</ThemedText>
           <TextInput
             value={name}
-            onChangeText={setName}
+            onChangeText={(value) => { editedName.current = true; setName(value); }}
             placeholder="Your name"
             placeholderTextColor={theme.textSecondary}
             autoCapitalize="words"
@@ -132,18 +140,19 @@ export default function ProfileScreen() {
             disabled={saving}
             style={[styles.button, { backgroundColor: theme.accent, opacity: saving ? 0.6 : 1 }]}>
             <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? 'Saving…' : 'Save changes'}
             </ThemedText>
           </PressableScale>
         </View>
 
         <View style={styles.spacer} />
 
-        <Pressable onPress={signOut} style={styles.signOut} hitSlop={8}>
+        <Pressable onPress={() => { void signOut().catch(() => setStatus('Could not sign out. Please try again.')); }} style={styles.signOut} hitSlop={8}>
           <ThemedText type="small" style={styles.signOutText}>
             Sign out
           </ThemedText>
         </Pressable>
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -151,7 +160,10 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  safe: { flex: 1, maxWidth: 480, width: '100%', alignSelf: 'center', paddingHorizontal: Spacing.three },
+  profileIntro: { padding: 24, borderRadius: 22, gap: 10, marginVertical: 20 },
+  eyebrow: { fontSize: 10, lineHeight: 16, letterSpacing: 1.5, fontWeight: '700' },
+  title: { fontSize: 32, lineHeight: 40, letterSpacing: -1, fontWeight: '700' },
+  safe: { flex: 1, maxWidth: 600, width: '100%', alignSelf: 'center', paddingHorizontal: Spacing.three },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -174,7 +186,7 @@ const styles = StyleSheet.create({
   },
   editBadgeText: { color: '#ffffff', fontSize: 15 },
   hint: { marginTop: Spacing.two },
-  form: { gap: Spacing.two },
+  form: { gap: 12, padding: 24, borderWidth: 1, borderRadius: 22 },
   input: {
     borderRadius: Spacing.three,
     borderWidth: StyleSheet.hairlineWidth,

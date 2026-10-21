@@ -20,7 +20,7 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
     try {
       setMembers(await fetchMembers(listId));
     } catch (err) {
-      console.warn('Failed to load members', err);
+      setStatus('Members are unavailable. Connect to the server to view or invite people.');
     }
   }, [listId]);
 
@@ -30,7 +30,7 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
 
   async function invite() {
     const trimmed = email.trim();
-    if (!trimmed) return;
+    if (!trimmed || busy) return;
     setBusy(true);
     setStatus(null);
     try {
@@ -61,6 +61,7 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
       exiting={FadeOutUp.duration(150)}
       style={[styles.panel, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       <ThemedText type="smallBold">Shared with</ThemedText>
+      {status ? <ThemedText accessibilityLiveRegion="polite" type="small" themeColor="textSecondary">{status}</ThemedText> : null}
 
       <View style={styles.members}>
         {members.map((m) => (
@@ -104,17 +105,13 @@ export function ShareSheet({ listId, isOwner }: { listId: string; isOwner: boole
               {busy ? (
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
-                <ThemedText type="smallBold" style={styles.buttonText}>
+                <ThemedText type="smallBold" style={[styles.buttonText, { color: theme.onAccent }]}>
                   Invite
                 </ThemedText>
               )}
             </PressableScale>
           </View>
-          {status ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              {status}
-            </ThemedText>
-          ) : null}
+
         </>
       ) : (
         <ThemedText type="small" themeColor="textSecondary">

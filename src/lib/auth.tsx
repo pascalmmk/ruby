@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { openOffline } from './offline';
 import type { Session } from '@supabase/supabase-js';
 import {
   createContext,
@@ -25,16 +27,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-
+    let active = true;
+    let revision = 0;
+    async function apply(next: Session | null) {
+      const current = ++revision;
+      await openOffline(next?.user.id ?? null);
+      if (active && current === revision) {
+        setSession(next);
+        setLoading(false);
+      }
+    }
+    // Read the SDK's persisted session without waiting for token refresh during an outage.
+    const key = `sb-${new URL(process.env.EXPO_PUBLIC_SUPABASE_URL!).hostname.split('.')[0]}-auth-token`;
+    const initialRevision = revision;
+    AsyncStorage.getItem(key).then((saved) => {
+      if (active && revision === initialRevision) return apply(saved ? JSON.parse(saved) : null);
+    }).catch(() => { if (active) setLoading(false); });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
+      // Defer work outside Supabase's auth lock.
+      setTimeout(() => { if (active) void apply(next).catch(console.warn); }, 0);
     });
-
-    return () => sub.subscription.unsubscribe();
+    return () => { active = false; sub.subscription.unsubscribe(); };
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -50,7 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error?.message ?? null };
       },
       signOut: async () => {
-        await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
+        if (error) throw error;
       },
     }),
     [session, loading],
